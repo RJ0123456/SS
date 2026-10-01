@@ -1,0 +1,18 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+
+# Local environments
+.venv/
+venv/
+
+# Build and package metadata
+build/
+dist/
+*.egg-info/
+
+# Training checkpoints
+checkpoints/
+*.pt
+*.pth
+*.ckpt

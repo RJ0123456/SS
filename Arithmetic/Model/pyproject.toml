@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "arithmetic-gpt"
+version = "0.1.0"
+description = "A character-level decoder-only Transformer for arithmetic training data"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "torch>=2.0",
+]
+
+[project.scripts]
+arithmetic-gpt-train = "train:main"
+
+[tool.setuptools]
+py-modules = ["model", "train"]
