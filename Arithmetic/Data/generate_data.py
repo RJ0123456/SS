@@ -65,7 +65,11 @@ def generate_problem(rng: random.Random, include_negative: bool = False) -> str:
         running_total = next_total
 
     expression = " ".join(expression_parts)
-    return f"{expression} = {running_total}\n\n" + "\n\n".join(steps)
+    return (
+        f"{expression} = ?\n\n"
+        + "\n\n".join(steps)
+        + f"\n\n{expression} = {running_total} <EOF>"
+    )
 
 
 def problem_blocks(
