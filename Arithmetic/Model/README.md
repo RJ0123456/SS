@@ -46,6 +46,35 @@ python Arithmetic\Model\train.py `
   --d-model 32 --n-heads 4 --n-layers 2 --d-ff 64 --device cpu
 ```
 
+## Generate
+
+A checkpoint is a saved PyTorch state, not an executable; `generate.py` loads it, rebuilds the model from the stored configuration, and continues a prompt.
+
+From `Arithmetic/Model`:
+
+```powershell
+uv run generate.py
+```
+
+Or from the repository root, pointing at the checkpoint explicitly:
+
+```powershell
+python Arithmetic\Model\generate.py --checkpoint Arithmetic\Model\checkpoints\gpt.pt
+```
+
+By default it loads `checkpoints/gpt.pt`, continues the prompt `5 + 6 = ?`, samples up to 512 new characters at temperature 0.8, and stops after the first `<EOF>` marker.
+
+| Option | Default | Purpose |
+| --- | ---: | --- |
+| `--checkpoint` | `checkpoints/gpt.pt` | Checkpoint saved by `train.py` |
+| `--prompt` | `5 + 6 = ?` | Text the model continues |
+| `--max-new-tokens` | 512 | Maximum characters to generate |
+| `--temperature` | 0.8 | Lower is more deterministic |
+| `--top-k` | 0 | Limits sampling to the top-k tokens (0 disables) |
+| `--seed` | 42 | Random seed |
+| `--device` | CUDA if available, otherwise CPU | PyTorch device |
+| `--keep-eof` | off | Keep text after the first `<EOF>` marker |
+
 ## Model Defaults
 
 | Setting | Default | CLI option |
