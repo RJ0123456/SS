@@ -68,3 +68,23 @@ ___
 ```
 
 The output directory is created automatically when it does not already exist.
+
+## Generate positive addition problems
+
+To generate two-operand addition problems with positive integers containing
+one to nine digits, run:
+
+```powershell
+python Arithmetic\Data\generate_addition_data.py 10000 --output-dir generated_addition --seed 42
+```
+
+The number of problems, output directory, and optional random seed use the same
+conventions as the general arithmetic generator. The digit length is sampled
+with a decaying distribution, so shorter numbers occur more often.
+
+Each problem shows the original expression, its non-zero place-value terms,
+and `<EOF>`. When an expression expands to at least four terms, an additional
+line lists those terms from smaller to larger place values, preserving their
+original order within each place value. Output files are named
+`addition_00001.txt`, `addition_00002.txt`, and so on, with at most 10,000
+problems per file.
