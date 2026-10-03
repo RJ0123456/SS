@@ -1,4 +1,4 @@
-# Data Generate
+# Generate Data
 
 ## Write a Python program to generate arithmetic problems
 
