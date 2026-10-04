@@ -43,8 +43,8 @@ def generate_problem(rng: random.Random) -> str:
         expression,
         f"= {' + '.join(map(str, terms))}",
     ]
-    if len(terms) >= 4:
-        place_ordered_terms = sorted(terms, key=lambda term: len(str(term)))
+    place_ordered_terms = sorted(terms)
+    if place_ordered_terms != terms:
         lines.append(f"= {' + '.join(map(str, place_ordered_terms))}")
     lines.append("<EOF>")
     return "\n".join(lines)
