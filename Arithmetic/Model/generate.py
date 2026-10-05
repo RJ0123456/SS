@@ -67,7 +67,8 @@ def generate_text(
             top_values, _ = torch.topk(logits, min(top_k, logits.size(-1)))
             logits[logits < top_values[:, [-1]]] = -float("inf")
         probabilities = F.softmax(logits, dim=-1)
-        next_token = torch.multinomial(probabilities, num_samples=1)
+        # next_token = torch.multinomial(probabilities, num_samples=1)
+        next_token = torch.argmax(probabilities, dim=-1, keepdim=True)
         token_ids = torch.cat((token_ids, next_token), dim=1)
     return token_ids
 
