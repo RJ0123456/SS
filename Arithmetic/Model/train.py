@@ -17,7 +17,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output", type=Path, default=Path("Arithmetic/Model/checkpoints/gpt.pt"))
     parser.add_argument("--steps", type=int, default=10_000)
     parser.add_argument("--batch-size", type=int, default=64)
-    parser.add_argument("--block-size", type=int, default=256)
+    parser.add_argument("--block-size", type=int, default=512)
     parser.add_argument("--learning-rate", type=float, default=3e-4)
     parser.add_argument("--weight-decay", type=float, default=0.1)
     parser.add_argument("--eval-interval", type=int, default=500)
@@ -50,23 +50,43 @@ def load_corpus(data_dir: Path) -> str:
     return "\n\n".join(path.read_text(encoding="utf-8") for path in files)
 
 
+def split_examples(text: str) -> list[str]:
+    """Split the corpus into complete examples, including their blank-line separator."""
+    return [
+        part.strip("\n") + "\n\n"
+        for part in text.split("\n\n")
+        if part.strip()
+    ]
+
+
 def get_batch(
-    data: torch.Tensor,
+    data: list[torch.Tensor],
     batch_size: int,
     block_size: int,
     device: torch.device,
 ) -> tuple[torch.Tensor, torch.Tensor]:
-    starts = torch.randint(len(data) - block_size, (batch_size,))
-    inputs = torch.stack([data[start : start + block_size] for start in starts])
-    targets = torch.stack([data[start + 1 : start + block_size + 1] for start in starts])
+    examples = [data[index] for index in torch.randint(len(data), (batch_size,)).tolist()]
+    sequence_lengths = [example.numel() - 1 for example in examples]
+    sequence_length = max(sequence_lengths)
+    if sequence_length > block_size:
+        raise ValueError(
+            f"A complete example needs {sequence_length} input positions, "
+            f"exceeding block-size={block_size}; increase --block-size."
+        )
+
+    inputs = torch.zeros((batch_size, sequence_length), dtype=torch.long)
+    targets = torch.full((batch_size, sequence_length), -100, dtype=torch.long)
+    for row, (example, length) in enumerate(zip(examples, sequence_lengths)):
+        inputs[row, :length] = example[:-1]
+        targets[row, :length] = example[1:]
     return inputs.to(device), targets.to(device)
 
 
 @torch.no_grad()
 def estimate_loss(
     model: GPTLanguageModel,
-    train_data: torch.Tensor,
-    validation_data: torch.Tensor,
+    train_data: list[torch.Tensor],
+    validation_data: list[torch.Tensor],
     batch_size: int,
     block_size: int,
     eval_iters: int,
@@ -94,19 +114,30 @@ def main() -> None:
 
     device = torch.device(args.device)
     text = load_corpus(args.data_dir)
-    vocabulary = sorted(set(text))
-    token_to_id = {character: index for index, character in enumerate(vocabulary)}
-    encoded = torch.tensor([token_to_id[character] for character in text], dtype=torch.long)
+    examples = split_examples(text)
+    if len(examples) < 2:
+        raise ValueError("At least two complete examples are required for training and validation.")
 
-    validation_size = int(len(encoded) * args.validation_fraction)
-    training_size = len(encoded) - validation_size
-    if min(training_size, validation_size) <= args.block_size:
+    vocabulary = sorted(set("".join(examples)))
+    token_to_id = {character: index for index, character in enumerate(vocabulary)}
+    encoded_examples = [
+        torch.tensor([token_to_id[character] for character in example], dtype=torch.long)
+        for example in examples
+    ]
+
+    longest_example = max(example.numel() - 1 for example in encoded_examples)
+    if longest_example > args.block_size:
         raise ValueError(
-            "The training and validation splits must each contain more characters "
-            "than block-size; use more data or a smaller --block-size."
+            f"The longest complete example needs {longest_example} input positions, "
+            f"exceeding block-size={args.block_size}; increase --block-size."
         )
-    train_data = encoded[:training_size]
-    validation_data = encoded[training_size:]
+
+    validation_size = max(1, int(len(encoded_examples) * args.validation_fraction))
+    if validation_size >= len(encoded_examples):
+        raise ValueError("The validation split leaves no complete examples for training.")
+    training_size = len(encoded_examples) - validation_size
+    train_data = encoded_examples[:training_size]
+    validation_data = encoded_examples[training_size:]
 
     config = GPTConfig(
         vocab_size=len(vocabulary),
@@ -124,7 +155,11 @@ def main() -> None:
         weight_decay=args.weight_decay,
     )
 
-    print(f"Training on {device}; corpus={len(encoded):,} characters; vocabulary={len(vocabulary)}")
+    corpus_size = sum(example.numel() for example in encoded_examples)
+    print(
+        f"Training on {device}; examples={len(encoded_examples):,}; "
+        f"corpus={corpus_size:,} characters; vocabulary={len(vocabulary)}"
+    )
     for step in range(1, args.steps + 1):
         if step == 1 or step % args.eval_interval == 0 or step == args.steps:
             losses = estimate_loss(

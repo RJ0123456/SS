@@ -123,6 +123,7 @@ class GPTLanguageModel(nn.Module):
             loss = F.cross_entropy(
                 logits.reshape(batch_size * sequence_length, self.config.vocab_size),
                 targets.reshape(batch_size * sequence_length),
+                ignore_index=-100,
             )
         return logits, loss
 
