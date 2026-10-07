@@ -75,7 +75,7 @@ To generate two-operand addition problems with positive integers containing
 one to nine digits, run:
 
 ```powershell
-python Arithmetic\Data\generate_addition_data.py 10000 --output-dir generated_addition --seed 42
+python Arithmetic\Data\generate_data_ds.py 10000 --output-dir generated --seed 42
 ```
 
 The number of problems, output directory, and optional random seed use the same
